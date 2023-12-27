@@ -7,9 +7,9 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Common {
+class CommandExecutor {
 
-    public static List<String> execute(List<String> command, String directory) {
+    static List<String> execute(List<String> command, String directory) {
         ArrayList<String> outputLines = new ArrayList<>();
         try {
 
@@ -26,10 +26,7 @@ public class Common {
 
             int exitCode = process.waitFor();
             if (exitCode != 0) {
-                BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-                while ((line = errorReader.readLine()) != null) {
-                    outputLines.add(line);
-                }
+                addErrorLinesIntoOutputLines(outputLines, process);
             }
             return outputLines;
 
@@ -39,9 +36,12 @@ public class Common {
         return outputLines;
     }
 
-    public static void stopProgram(String reason){
-        System.out.println("ERROR: "+reason);
-        System.exit(1);
+    private static void addErrorLinesIntoOutputLines(ArrayList<String> outputLines, Process process) throws IOException {
+        String line;
+        BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+        while ((line = errorReader.readLine()) != null) {
+            outputLines.add(line);
+        }
     }
 
 }

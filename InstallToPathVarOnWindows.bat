@@ -1,0 +1,1 @@
+reg add HKCU\Environment /v PATH /t REG_EXPAND_SZ /d "%PATH%;%cd%" /f

@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-import cz.remove.old.branches.commandline.Common;
 import cz.remove.old.branches.commandline.GitOperations;
 
 
@@ -13,7 +12,7 @@ public class OldBranchesRemover {
     public static void removeOldBranches(String repositoryPath, ArgumentParser argumentParser) {
         System.out.println("Repository path: [" + repositoryPath + "]");
         GitOperations gitOperations = new GitOperations(repositoryPath);
-        startBranchShouldNotBeOneOfProcessedBranches(argumentParser, gitOperations.getCurrentBranch());
+        startBranchShouldNotBeOneOfTheProcessedBranches(argumentParser, gitOperations.getCurrentBranch());
         gitOperations.makeSureThereAreNoUntrackedFiles();
         String developerEmailToSkip = getDeveloperEmailToSkip(argumentParser, gitOperations);
 
@@ -26,21 +25,22 @@ public class OldBranchesRemover {
 
         for (String branchName : branches) {
             System.out.print("Checking branch: [" + branchName + "]");
-            boolean isNotFullyMerged = notMergedBranchNames.contains(branchName);
-            if (isNotFullyMerged && !argumentParser.isForceDelete()) {
-                System.out.println(" SKIPPED - Branch is not fully merged. Use -D param to override.");
-                continue;
-            }
             if (!branchName.startsWith(argumentParser.getBranchNamePrefix()) && !argumentParser.getBranchNamePrefix()
                     .isEmpty()) {
                 System.out.println(" SKIPPED - Does not fit the prefix. Use -p param to change the prefix.");
+                continue;
+            }
+            boolean isNotFullyMerged = notMergedBranchNames.contains(branchName);
+            if (isNotFullyMerged && !argumentParser.isForceDelete()) {
+                System.out.println(" SKIPPED - Branch is not fully merged. Use -D param to override.");
                 continue;
             }
             String lastCommitDeveloperEmail = gitOperations.getBranchLastCommitDeveloperEmail(branchName);
             if (developerEmailToSkip != null) {
                 if (lastCommitDeveloperEmail.toLowerCase().contains(developerEmailToSkip)) {
                     System.out.println(
-                            " SKIPPED - Last commit author has same email as current git user. Use -l param to skip author check. "
+                            " SKIPPED - Last commit author has the same email as current git user. Use -l param to "
+                                    + "skip author check. "
                                     + lastCommitDeveloperEmail);
                     continue;
                 }
@@ -48,13 +48,13 @@ public class OldBranchesRemover {
             System.out.println();
             CurrentBranchInfo currentBranchInfo = new CurrentBranchInfo(branchName, lastCommitDeveloperEmail,
                     isNotFullyMerged);
-            if (!gitOperations.islocalBranchSynchronizedWithOrigin(branchName)) {
+            if (!gitOperations.isLocalBranchSynchronizedWithOrigin(branchName)) {
                 forcePullBranchDialog(gitOperations, argumentParser, currentBranchInfo);
             }
 
             ifTheBranchIsTooOldDelete(gitOperations, argumentParser, currentBranchInfo);
         }
-
+        gitOperations.checkoutStartBranch();
     }
 
     private static String getDeveloperEmailToSkip(ArgumentParser argumentParser, GitOperations gitOperations) {
@@ -66,13 +66,14 @@ public class OldBranchesRemover {
         return developerEmailToSkip;
     }
 
-    private static void startBranchShouldNotBeOneOfProcessedBranches(ArgumentParser argumentParser,
+    private static void startBranchShouldNotBeOneOfTheProcessedBranches(ArgumentParser argumentParser,
             String startBranch) {
         if (startBranch.startsWith(argumentParser.getBranchNamePrefix()) && !argumentParser.getBranchNamePrefix()
                 .isEmpty()) {
-            Common.stopProgram("The current branch match prefix of processed branches. Make sure that you start on a branch that "
-                    + "you don't want to delete. For example master branch. Current branch: "
-                    + startBranch);
+            Main.stopProgram(
+                    "The current branch match prefix of processed branches. Make sure that you start on a branch that "
+                            + "you don't want to delete. For example master branch (git checkout master). Current branch: "
+                            + startBranch);
         }
     }
 
@@ -90,7 +91,7 @@ public class OldBranchesRemover {
                                 + argumentParser.getOlderThanDays());
             }
         } catch (Exception e) {
-            Common.stopProgram("Could not get the date of the last commit.");
+            Main.stopProgram("Could not get the date of the last commit.");
         }
     }
 
@@ -103,7 +104,7 @@ public class OldBranchesRemover {
         if (argumentParser.isDoNotAsk()) {
             gitOperations.forceFetchBranch(currentBranchInfo.getName());
         } else if (UserAsker.askWhetherToContinue(
-                "WARNING! Differences on the local branch will be lost. Do you want to continue?")) {
+                "WARNING! Differences on the local branch will be lost. Do you want to continue by FORCE PULL?")) {
             gitOperations.forceFetchBranch(currentBranchInfo.getName());
         }
     }
@@ -121,14 +122,14 @@ public class OldBranchesRemover {
                 gitOperations.deleteGitBranchWithForce(currentBranchInfo.getName());
             } else if (UserAsker.askWhetherToContinue(
                     "WARNING! The branch is not fully merged. Differences on the local branch will be lost. Do you "
-                            + "want to continue?")) {
+                            + "want to continue by DELETE?")) {
                 gitOperations.deleteGitBranchWithForce(currentBranchInfo.getName());
             }
         } else {
             if (argumentParser.isDoNotAsk()) {
                 gitOperations.deleteGitBranchIfMerged(currentBranchInfo.getName());
             } else if (UserAsker.askWhetherToContinue(
-                    "WARNING! Differences on the local branch will be lost. Do you want to continue?")) {
+                    "WARNING! Differences on the local branch will be lost. Do you want to continue by DELETE?")) {
                 gitOperations.deleteGitBranchIfMerged(currentBranchInfo.getName());
             }
         }

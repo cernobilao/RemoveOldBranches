@@ -88,7 +88,7 @@ public class ArgumentParser {
     }
 
     public void printUsageAndExit() {
-        System.out.println("Usage: OldBranchRemover [options]");
+        System.out.println("Usage: RemoveOldBranches [options]");
         System.out.println("Options:");
         System.out.println("  -h, --help                        Show help message.");
         System.out.println("  -l, --skip-last-commit-author     Skip last commit author check. By default only branches from other users are deleted.");

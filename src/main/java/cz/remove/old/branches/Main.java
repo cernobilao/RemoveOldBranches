@@ -15,7 +15,11 @@ public class Main {
         String repositoryPath = new File(System.getProperty("user.dir")).getAbsolutePath();
 
         OldBranchesRemover.removeOldBranches(repositoryPath, argumentParser);
+    }
 
+    public static void stopProgram(String reason){
+        System.out.println("ERROR: "+reason);
+        System.exit(1);
     }
 
 }

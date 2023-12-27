@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import cz.remove.old.branches.Main;
+
 public class GitOperations {
 
     private final String repositoryPath;
@@ -18,7 +20,7 @@ public class GitOperations {
         List<String> command = new ArrayList<>();
         startGitCommand(command);
         command.add("branch");
-        List<String> branches = Common.execute(command, repositoryPath);
+        List<String> branches = CommandExecutor.execute(command, repositoryPath);
         return branches.stream()
                 .map(element -> element.replace("* ", "").trim())
                 .collect(Collectors.toList());
@@ -29,9 +31,9 @@ public class GitOperations {
         startGitCommand(command);
         command.add("branch");
         command.add("--show-current");
-        List<String> resultLines = Common.execute(command, repositoryPath);
+        List<String> resultLines = CommandExecutor.execute(command, repositoryPath);
         if (resultLines.isEmpty()) {
-            Common.stopProgram("Could not detect current branch. Is the repository path correct?");
+            Main.stopProgram("Could not detect current branch. Is the repository path correct?");
         }
         return resultLines.get(0);
     }
@@ -43,9 +45,9 @@ public class GitOperations {
         command.add("-s");
         command.add("--format=%ci");
         command.add(branchName);
-        List<String> resultLines = Common.execute(command, repositoryPath);
+        List<String> resultLines = CommandExecutor.execute(command, repositoryPath);
         if (resultLines.isEmpty()) {
-            Common.stopProgram("Could not get the date of the last commit.");
+            Main.stopProgram("Could not get the date of the last commit.");
         }
         return resultLines.get(0).substring(0, 10);
     }
@@ -58,9 +60,9 @@ public class GitOperations {
         command.add("-1");
         command.add("--format=%ae");
         command.add(branchName);
-        List<String> resultLines = Common.execute(command, repositoryPath);
+        List<String> resultLines = CommandExecutor.execute(command, repositoryPath);
         if (resultLines.isEmpty()) {
-            Common.stopProgram("Could not get last commit author email. Use -l param to skip last commit author check.");
+            Main.stopProgram("Could not get last commit author email. Use -l param to skip last commit author check.");
         }
         return resultLines.get(0);
     }
@@ -74,12 +76,9 @@ public class GitOperations {
     }
 
     private List<String> deleteGitBranch(String branchName, boolean force) {
-        List<String> command = new ArrayList<>();
-        startGitCommand(command);
-        command.add("checkout");
-        command.add(startBranch);
-        Common.execute(command, repositoryPath);
+        checkoutStartBranch();
 
+        List<String> command = new ArrayList<>();
         startNewGitCommand(command);
         command.add("branch");
         if (force) {
@@ -88,9 +87,17 @@ public class GitOperations {
             command.add("-d");
         }
         command.add(branchName);
-        List<String> executeOutput = Common.execute(command, repositoryPath);
+        List<String> executeOutput = CommandExecutor.execute(command, repositoryPath);
         System.out.println(executeOutput);
         return executeOutput;
+    }
+
+    public List<String> checkoutStartBranch() {
+        List<String> command = new ArrayList<>();
+        startGitCommand(command);
+        command.add("checkout");
+        command.add(startBranch);
+        return CommandExecutor.execute(command, repositoryPath);
     }
 
     public List<String> getNotMergedBranchNames() {
@@ -98,7 +105,7 @@ public class GitOperations {
         startGitCommand(command);
         command.add("branch");
         command.add("--no-merged");
-        List<String> trimmedListOfBranches = Common.execute(command, repositoryPath).stream()
+        List<String> trimmedListOfBranches = CommandExecutor.execute(command, repositoryPath).stream()
                 .map(String::trim)
                 .collect(Collectors.toList());
         return trimmedListOfBranches;
@@ -109,41 +116,41 @@ public class GitOperations {
         startGitCommand(command);
         command.add("fetch");
         command.add("origin");
-        Common.execute(command, repositoryPath);
+        CommandExecutor.execute(command, repositoryPath);
 
         startNewGitCommand(command);
         command.add("checkout");
         command.add(branchName);
-        Common.execute(command, repositoryPath);
+        CommandExecutor.execute(command, repositoryPath);
 
         startNewGitCommand(command);
         command.add("reset");
         command.add("--hard");
         command.add("origin/" + branchName);
-        Common.execute(command, repositoryPath);
+        CommandExecutor.execute(command, repositoryPath);
 
         startNewGitCommand(command);
         command.add("pull");
-        return Common.execute(command, repositoryPath);
+        return CommandExecutor.execute(command, repositoryPath);
     }
 
-    public boolean islocalBranchSynchronizedWithOrigin(String branchName) {
+    public boolean isLocalBranchSynchronizedWithOrigin(String branchName) {
         List<String> command = new ArrayList<>();
         startGitCommand(command);
         command.add("fetch");
         command.add("origin");
-        Common.execute(command, repositoryPath);
+        CommandExecutor.execute(command, repositoryPath);
 
         startNewGitCommand(command);
         command.add("checkout");
         command.add(branchName);
-        Common.execute(command, repositoryPath);
+        CommandExecutor.execute(command, repositoryPath);
 
         startNewGitCommand(command);
         command.add("status");
-        List<String> resultLines = Common.execute(command, repositoryPath);
+        List<String> resultLines = CommandExecutor.execute(command, repositoryPath);
         if (resultLines.isEmpty()) {
-            Common.stopProgram("Could not detect if the branch is synchronized with origin. Is the origin set correctly?");
+            Main.stopProgram("Could not detect if the branch is synchronized with origin. Is the origin set correctly?");
         }
         return !resultLines.get(1).contains("have diverged");
     }
@@ -152,10 +159,10 @@ public class GitOperations {
         List<String> command = new ArrayList<>();
         startGitCommand(command);
         command.add("status");
-        List<String> resultLines = Common.execute(command, repositoryPath);
+        List<String> resultLines = CommandExecutor.execute(command, repositoryPath);
         if (!resultLines.isEmpty()) {
             if (resultLines.get(resultLines.size() - 1).contains("untracked files present")) {
-                Common.stopProgram("Untracked files present. Make sure there are no local "
+                Main.stopProgram("Untracked files present. Make sure there are no local "
                         + "changes.");
             }
         }
@@ -167,11 +174,11 @@ public class GitOperations {
         startGitCommand(command);
         command.add("config");
         command.add("user.email");
-        List<String> resultLines = Common.execute(command, repositoryPath);
+        List<String> resultLines = CommandExecutor.execute(command, repositoryPath);
         if (resultLines.isEmpty()) {
-            Common.stopProgram("Could not get current git user email. Use -l para");
+            Main.stopProgram("Could not get current git user email. Use -l param to skip last commit author check.");
         }
-        return "ondrej.cernobila@favorlogic.com";
+        return resultLines.get(0);
     }
 
     private static void startGitCommand(List<String> command) {
